@@ -272,7 +272,6 @@ async function sendMessage() {
   document.getElementById('send-btn').disabled = true;
   appendBubble('user', text);
   chatHistory.push({ role: 'user', content: text });
-  scrollToBottom();
   const typingId = showTyping();
   isLoading = true;
   try {
@@ -282,11 +281,12 @@ async function sendMessage() {
     chatHistory.push({ role: 'assistant', content: reply });
     if (chatHistory.length > 40) chatHistory = chatHistory.slice(-40);
     localStorage.setItem(STORAGE_KEY_CHAT, JSON.stringify(chatHistory));
-    // 新しいボットメッセージが出たら、そのメッセージの上部にスクロール
+    // ユーザーメッセージの直後（ボットメッセージの最上部）にスクロール
     const chatArea = document.getElementById('chat-area');
     const messages = chatArea.querySelectorAll('.msg-row');
-    if (messages.length > 0) {
-      messages[messages.length - 1].scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (messages.length >= 2) {
+      // 最後から2番目のメッセージ（ユーザーメッセージ）の位置にスクロール
+      messages[messages.length - 2].scrollIntoView({ behavior: 'smooth', block: 'end' });
     }
   } catch (e) {
     hideTyping(typingId);
