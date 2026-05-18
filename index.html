@@ -281,12 +281,11 @@ async function sendMessage() {
     chatHistory.push({ role: 'assistant', content: reply });
     if (chatHistory.length > 40) chatHistory = chatHistory.slice(-40);
     localStorage.setItem(STORAGE_KEY_CHAT, JSON.stringify(chatHistory));
-    // ユーザーメッセージの直後（ボットメッセージの最上部）にスクロール
+    // ユーザーメッセージが画面上部に見えるようにスクロール
     const chatArea = document.getElementById('chat-area');
     const messages = chatArea.querySelectorAll('.msg-row');
     if (messages.length >= 2) {
-      // 最後から2番目のメッセージ（ユーザーメッセージ）の位置にスクロール
-      messages[messages.length - 2].scrollIntoView({ behavior: 'smooth', block: 'end' });
+      messages[messages.length - 2].scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   } catch (e) {
     hideTyping(typingId);
