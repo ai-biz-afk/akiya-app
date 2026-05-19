@@ -71,15 +71,16 @@
     flex: 1; overflow-y: auto; padding: 16px 12px;
     display: flex; flex-direction: column; gap: 12px;
     -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
   }
-  .msg-row { display: flex; align-items: flex-end; gap: 8px; animation: fadeIn 0.25s ease forwards; }
+  .msg-row { display: flex; align-items: flex-start; gap: 8px; animation: fadeIn 0.25s ease forwards; }
   @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
   .msg-row.user { flex-direction: row-reverse; }
   .avatar {
     width: 34px; height: 34px; border-radius: 50%;
     background: linear-gradient(135deg, #4A4E8E, #8B6BB5);
     display: flex; align-items: center; justify-content: center;
-    font-size: 16px; flex-shrink: 0;
+    font-size: 16px; flex-shrink: 0; margin-top: 2px;
   }
   .bubble {
     max-width: 72%; padding: 10px 14px; border-radius: 18px;
@@ -162,7 +163,6 @@
   <button class="send-btn" id="send-btn" onclick="sendMessage()" disabled>➤</button>
 </div>
 <script>
-// ★ GASのデプロイURLのみ設定（APIキー不要）
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxnd3Np7rHXgfVjnjBpS--5DvTy3YltD6GUa5FjfvAd1-A8r0TMhkcRqxquNuQ-KY8wuA/exec';
 
 const STORAGE_KEY_DOC  = 'akiya_doc_content';
@@ -270,10 +270,16 @@ async function sendMessage() {
   inputBox.value = '';
   autoResize(inputBox);
   document.getElementById('send-btn').disabled = true;
+
   appendBubble('user', text);
   chatHistory.push({ role: 'user', content: text });
+
+  // ユーザーメッセージを画面上部に表示
+  scrollToMessage('last-user');
+
   const typingId = showTyping();
   isLoading = true;
+
   try {
     const reply = await callGAS();
     hideTyping(typingId);
@@ -281,20 +287,28 @@ async function sendMessage() {
     chatHistory.push({ role: 'assistant', content: reply });
     if (chatHistory.length > 40) chatHistory = chatHistory.slice(-40);
     localStorage.setItem(STORAGE_KEY_CHAT, JSON.stringify(chatHistory));
-    // ボットメッセージの最上部にスクロール（ユーザーメッセージとボットメッセージが両方見える）
-    setTimeout(() => {
-      const chatArea = document.getElementById('chat-area');
-      const messages = chatArea.querySelectorAll('.msg-row');
-      if (messages.length >= 2) {
-        messages[messages.length - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
-    }, 100);
+
+    // ボット返答後もユーザーメッセージが上部に見える位置を維持
+    scrollToMessage('last-user');
+
   } catch (e) {
     hideTyping(typingId);
     appendBubble('error', 'エラーが発生しました。しばらくしてから再度お試しください。\n' + e.message);
     scrollToBottom();
   } finally {
     isLoading = false;
+  }
+}
+
+function scrollToMessage(target) {
+  const chatArea = document.getElementById('chat-area');
+  if (target === 'last-user') {
+    const userMessages = chatArea.querySelectorAll('.msg-row.user');
+    if (userMessages.length > 0) {
+      const lastUserMsg = userMessages[userMessages.length - 1];
+      const msgTop = lastUserMsg.offsetTop - chatArea.offsetTop;
+      chatArea.scrollTo({ top: msgTop - 16, behavior: 'smooth' });
+    }
   }
 }
 
@@ -329,7 +343,6 @@ function appendBubble(type, text) {
   }
   row.appendChild(bubble);
   chatArea.appendChild(row);
-  scrollToBottom();
 }
 
 function cleanMarkdown(text) {
