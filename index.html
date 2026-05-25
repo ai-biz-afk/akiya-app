@@ -163,8 +163,7 @@
   <button class="send-btn" id="send-btn" onclick="sendMessage()" disabled>➤</button>
 </div>
 <script>
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbxnd3Np7rHXgfVjnjBpS--5DvTy3YltD6GUa5FjfvAd1-A8r0TMhkcRqxquNuQ-KY8wuA/exec';
-
+// Vercel版：APIキー不要・すべてサーバーサイドで処理
 const STORAGE_KEY_DOC  = 'akiya_doc_content';
 const STORAGE_KEY_CHAT = 'akiya_chat_history';
 const STORAGE_KEY_DATE = 'akiya_last_updated';
@@ -196,15 +195,15 @@ function loadFromStorage() {
     docContent = saved;
     setStatus(true, `データ読み込み済み${savedDate ? '（' + savedDate + ' 時点）' : ''}`);
   } else {
-    fetchDocFromGAS();
+    fetchDocFromAPI();
   }
 }
 
-async function fetchDocFromGAS() {
+async function fetchDocFromAPI() {
   setStatus(false, 'データを取得中...');
   document.getElementById('btn-update').disabled = true;
   try {
-    const res = await fetch(GAS_URL + '?action=getDoc');
+    const res = await fetch('/api/getDoc');
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const text = await res.text();
     if (!text || text.startsWith('データの読み込みに失敗')) throw new Error(text);
@@ -224,7 +223,7 @@ async function fetchDocFromGAS() {
 function updateData() {
   localStorage.removeItem(STORAGE_KEY_DOC);
   localStorage.removeItem(STORAGE_KEY_DATE);
-  fetchDocFromGAS();
+  fetchDocFromAPI();
 }
 
 function setStatus(ok, text) {
@@ -281,7 +280,7 @@ async function sendMessage() {
   isLoading = true;
 
   try {
-    const reply = await callGAS();
+    const reply = await callChatAPI();
     hideTyping(typingId);
     appendBubble('bot', reply);
     chatHistory.push({ role: 'assistant', content: reply });
@@ -300,6 +299,24 @@ async function sendMessage() {
   }
 }
 
+async function callChatAPI() {
+  const response = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      messages: chatHistory.slice(-20),
+      docContent: docContent
+    })
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err.error || `サーバーエラー (${response.status})`);
+  }
+  const data = await response.json();
+  if (data.error) throw new Error(data.error);
+  return data.reply;
+}
+
 function scrollToMessage(target) {
   const chatArea = document.getElementById('chat-area');
   if (target === 'last-user') {
@@ -310,22 +327,6 @@ function scrollToMessage(target) {
       chatArea.scrollTo({ top: msgTop - 16, behavior: 'smooth' });
     }
   }
-}
-
-async function callGAS() {
-  const response = await fetch(GAS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain' },
-    body: JSON.stringify({
-      action: 'chat',
-      messages: chatHistory.slice(-20),
-      docContent: docContent
-    })
-  });
-  if (!response.ok) throw new Error(`GASエラー (${response.status})`);
-  const data = await response.json();
-  if (data.error) throw new Error(data.error);
-  return data.reply;
 }
 
 function appendBubble(type, text) {
