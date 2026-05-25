@@ -1,5 +1,5 @@
 /**
- * 町内会・自治体向けチャットボット
+ * 佐賀市空き家相談チャットボット
  * Vercel Serverless Function - Get Document API
  *
  * 環境変数（Vercelの管理画面で設定）：
@@ -7,12 +7,10 @@
  */
 
 export default async function handler(req, res) {
-  // CORSヘッダー設定
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-  // OPTIONSリクエスト（プリフライト）への対応
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
